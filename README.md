@@ -1,96 +1,79 @@
 # Minicompiler – Disciplina de Compiladores
-**Gramáticas, Árvores e Parsing**
+
+Este projeto é um compilador didático desenvolvido em Go, focado nas fases de **Análise Léxica** e **Análise Sintática**. Ele utiliza `goyacc` para o parsing LALR(1).
 
 ---
 
-## Como executar no Windows
+## 📂 Estrutura do Projeto
 
-Siga estes passos para rodar o projeto no seu terminal (PowerShell ou VS Code Terminal).
+A estrutura segue as boas práticas de organização do ecossistema Go:
+
+| Diretório / Arquivo | Função |
+|--- |--- |
+| `cmd/minicompiler/main.go` | Ponto de entrada da aplicação (CLI). |
+| `cmd/minicompiler/main_test.go` | Conjunto de testes e exemplos de validação. |
+| `pkg/compiler/` | O motor do compilador (Lexer e Parser). |
+| `pkg/compiler/lexer.go` | Analisador léxico que identifica tokens. |
+| `pkg/compiler/parser.y` | Definição da gramática (Yacc). |
+| `Makefile` | Atalhos para automação de build, testes e geração de código. |
+
+---
+
+## 🚀 Como Executar
 
 ### 1. Pré-requisitos
-Certifique-se de ter o **Go** instalado. No Windows, o jeito mais rápido via terminal é:
-```powershell
-winget install GoLang.Go
-```
-*Após instalar, feche e abra o VS Code novamente para que o comando `go` seja reconhecido.*
+Certifique-se de ter o **Go** instalado (versão 1.22 ou superior recomendada).
 
-### 2. Gerar o Executável
-No Windows, precisamos da extensão `.exe` para que o sistema identifique o arquivo corretamente:
-```powershell
-go build -o minicompiler.exe .
-```
+### 2. Usando o Makefile (Recomendado)
+Se você estiver no Linux ou Mac, use os comandos simplificados:
 
-### 3. Rodar a validação automática
-Para testar os exemplos que já estão programados no arquivo `main.go`:
-```powershell
-.\minicompiler.exe
-```
+*   **Validar exemplos (Testes):**
+    ```bash
+    make test
+    ```
+*   **Rodar modo interativo (Testar seu código):**
+    ```bash
+    make run
+    ```
+*   **Gerar o executável:**
+    ```bash
+    make build
+    ```
 
-### 4. Modo Interativo (Testar seu próprio código)
-Para digitar códigos manualmente e ver a análise léxica e sintática:
-```powershell
-.\minicompiler.exe -i
-```
+### 3. Usando Comandos Go CLI
+Caso não tenha o `make` instalado:
 
-> ⚠️ **DICA PARA O WINDOWS:**
-> 1. Digite seu código (ex: `x = 10;`).
-> 2. Pressione **Enter**.
-> 3. Pressione **`Ctrl + Z`** e depois **Enter** para finalizar a leitura e ver o resultado.
-> *(O comando `Ctrl+D` mencionado em tutoriais de Linux não funciona no Windows).*
+*   **Testes:** `go test -v ./...`
+*   **Interativo:** `go run ./cmd/minicompiler -i`
 
 ---
 
-## Arquivos do Projeto
+## 🛠️ Desenvolvimento e Alterações
 
-| Arquivo | Função |
-|---|---|
-| `lexer.go` | **Analisador Léxico** – Identifica tokens (palavras-chave, números, IDs). |
-| `parser.y` | **Gramática** – Define as regras (o "manual de instruções" da linguagem). |
-| `parser.go` | Código gerado automaticamente pelo `goyacc` a partir do `parser.y`. |
-| `main.go` | **Ponto de entrada** – Coordena a execução e exibe os resultados. |
+### Alterando a Gramática
+Se você modificar o arquivo `pkg/compiler/parser.y`, precisará gerar o código do parser novamente:
 
----
+1.  Instale o `goyacc`:
+    ```bash
+    go install golang.org/x/tools/cmd/goyacc@latest
+    ```
+2.  Gere o código:
+    ```bash
+    make generate
+    ```
 
-## Entendendo as Etapas
-
-### 1. O Lexer (Analisador Léxico)
-Identifica cada "palavra" do seu código e a classifica em categorias (Tokens).
-**Exemplo:** `x = 10;`
-- `x` ⮕ Identificador
-- `=` ⮕ Atribuição
-- `10` ⮕ Número
-- `;` ⮕ Delimitador
-
-### 2. O Parser (Analisador Sintático)
-Verifica se a ordem desses tokens faz sentido segundo a gramática definida.
-- `x = 10;` ✔ (Válido: segue a regra de atribuição)
-- `x 10 = ;` ✗ (Erro: ordem incorreta dos tokens)
-
----
-
-## Exemplos de Teste
-
-**Código que o programa aceita:**
+### Exemplos de Código Aceitos
 ```text
-x = 42;
-int soma = 10 + 5;
-total = (2 + 3) * 4;
-```
-
-**Código que gera erro:**
-```text
-x = 10    ← Erro: Falta o ponto-e-vírgula (;).
-int = 5;  ← Erro: 'int' é reservado e não pode ser nome de variável.
-x = 10 + ; ← Erro: Esperava um valor após o '+'.
+int x = 10;
+total = (a + b) * 5;
+int resultado = x + y + z;
 ```
 
 ---
 
-## Estrutura do Pipeline
+## 📝 Pipeline de Execução
 
-```text
-Código (Texto) ──► [LEXER] ──► Tokens ──► [PARSER] ──► Resultado (Sucesso/Erro)
-```
-
----
-
+1.  **Código Fonte** (Texto)
+2.  **Lexer** (`pkg/compiler/lexer.go`): Converte texto em Tokens.
+3.  **Parser** (`pkg/compiler/parser.go`): Valida a estrutura gramatical.
+4.  **Resultado**: Sucesso (Programa Aceito) ou Erro Sintático.

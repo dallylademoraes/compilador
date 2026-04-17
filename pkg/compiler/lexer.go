@@ -1,33 +1,18 @@
-package main
+package compiler
 
 import (
 	"bufio"
 	"fmt"
-	"os"
 	"strings"
 	"unicode"
 )
 
-// Os valores abaixo devem coincidir com os %token declarados no parser.y
-const (
-	TOKEN_EOF   = 0
-	TOKEN_INT   = 57346 // KEYWORD_INT
-	TOKEN_ID    = 57347 // ID
-	TOKEN_ATRIB = 57348 // ASSIGN
-	TOKEN_MAIS  = 57349 // PLUS
-	TOKEN_MENOS = 57350 // MINUS
-	TOKEN_VEZES = 57351 // TIMES
-	TOKEN_PVIRG = 57352 // SEMI
-	TOKEN_APAR  = 57353 // LPAREN
-	TOKEN_FPAR  = 57354 // RPAREN
-	TOKEN_NUM   = 57355 // NUM
-	TOKEN_ERRO  = 57356 // ERROR
-)
+const TOKEN_EOF = 0
 
 // InfoToken guarda o tipo do token e seu valor textual
 type InfoToken struct {
-	tipo  int
-	valor string
+	Tipo  int
+	Valor string
 }
 
 // Lexer realiza a análise léxica
@@ -54,8 +39,8 @@ func (l *Lexer) avancar() {
 	l.atual = r
 }
 
-// proximoToken é chamado pelo parser via interface yyLex
-func (l *Lexer) proximoToken() InfoToken {
+// ProximoToken é chamado pelo parser via interface yyLex
+func (l *Lexer) ProximoToken() InfoToken {
 	for !l.fimArq && unicode.IsSpace(l.atual) {
 		l.avancar()
 	}
@@ -72,9 +57,9 @@ func (l *Lexer) proximoToken() InfoToken {
 		}
 		palavra := sb.String()
 		if palavra == "int" {
-			return InfoToken{TOKEN_INT, palavra}
+			return InfoToken{KEYWORD_INT, palavra}
 		}
-		return InfoToken{TOKEN_ID, palavra}
+		return InfoToken{ID, palavra}
 	}
 
 	// Números
@@ -84,7 +69,7 @@ func (l *Lexer) proximoToken() InfoToken {
 			sb.WriteRune(l.atual)
 			l.avancar()
 		}
-		return InfoToken{TOKEN_NUM, sb.String()}
+		return InfoToken{NUM, sb.String()}
 	}
 
 	// Símbolos
@@ -92,41 +77,54 @@ func (l *Lexer) proximoToken() InfoToken {
 	l.avancar()
 	switch ch {
 	case '=':
-		return InfoToken{TOKEN_ATRIB, "="}
+		return InfoToken{ASSIGN, "="}
 	case '+':
-		return InfoToken{TOKEN_MAIS, "+"}
+		return InfoToken{PLUS, "+"}
 	case '-':
-		return InfoToken{TOKEN_MENOS, "-"}
+		return InfoToken{MINUS, "-"}
 	case '*':
-		return InfoToken{TOKEN_VEZES, "*"}
+		return InfoToken{TIMES, "*"}
 	case ';':
-		return InfoToken{TOKEN_PVIRG, ";"}
+		return InfoToken{SEMI, ";"}
 	case '(':
-		return InfoToken{TOKEN_APAR, "("}
+		return InfoToken{LPAREN, "("}
 	case ')':
-		return InfoToken{TOKEN_FPAR, ")"}
+		return InfoToken{RPAREN, ")"}
 	}
 
-	return InfoToken{TOKEN_ERRO, string(ch)}
+	return InfoToken{ERROR, string(ch)}
 }
 
-// Interface yyLexer exigida pelo goyacc
-
+// YyLex é a estrutura exigida pelo goyacc
 type YyLex struct {
 	lexer *Lexer
 	lval  *yySymType
-	erros []string
+	Erros []string
 }
 
 func (y *YyLex) Lex(lval *yySymType) int {
-	tok := y.lexer.proximoToken()
-	lval.sval = tok.valor
+	tok := y.lexer.ProximoToken()
+	lval.sval = tok.Valor
 	y.lexer.tokens = append(y.lexer.tokens, tok)
-	return tok.tipo
+	return tok.Tipo
 }
 
 func (y *YyLex) Error(s string) {
-	y.erros = append(y.erros, s)
+	y.Erros = append(y.Erros, s)
+}
+
+// ExecutarParser coordena a análise sintática
+func ExecutarParser(entrada string) bool {
+	lexer := NovoLexer(entrada)
+	yylex := &YyLex{lexer: lexer}
+	resultado := yyParse(yylex)
+	if resultado != 0 || len(yylex.Erros) > 0 {
+		for _, e := range yylex.Erros {
+			fmt.Printf("│   [Erro sintático] %s\n", e)
+		}
+		return false
+	}
+	return true
 }
 
 // ImprimirTabelaTokens exibe a tabela léxica formatada
@@ -137,70 +135,59 @@ func ImprimirTabelaTokens(entrada string) {
 
 	l := NovoLexer(entrada)
 	for {
-		tok := l.proximoToken()
-		if tok.tipo == TOKEN_EOF {
+		tok := l.ProximoToken()
+		if tok.Tipo == TOKEN_EOF {
 			break
 		}
-		cat := nomeCategoria(tok.tipo)
-		nomeTok := nomeTipoToken(tok.tipo)
-		fmt.Printf("│ %-19s │ %-20s │ %-18s │\n", tok.valor, nomeTok, cat)
+		cat := NomeCategoria(tok.Tipo)
+		nomeTok := NomeTipoToken(tok.Tipo)
+		fmt.Printf("│ %-19s │ %-20s │ %-18s │\n", tok.Valor, nomeTok, cat)
 	}
 	fmt.Println("└─────────────────────┴──────────────────────┴────────────────────┘")
 }
 
-func nomeCategoria(tipo int) string {
+func NomeCategoria(tipo int) string {
 	switch tipo {
-	case TOKEN_INT:
+	case KEYWORD_INT:
 		return "palavra-chave"
-	case TOKEN_ID:
+	case ID:
 		return "identificador"
-	case TOKEN_ATRIB:
+	case ASSIGN:
 		return "atribuição"
-	case TOKEN_MAIS, TOKEN_MENOS, TOKEN_VEZES:
+	case PLUS, MINUS, TIMES:
 		return "operador"
-	case TOKEN_PVIRG, TOKEN_APAR, TOKEN_FPAR:
+	case SEMI, LPAREN, RPAREN:
 		return "delimitador"
-	case TOKEN_NUM:
+	case NUM:
 		return "número"
 	default:
 		return "erro"
 	}
 }
 
-func nomeTipoToken(tipo int) string {
+func NomeTipoToken(tipo int) string {
 	switch tipo {
-	case TOKEN_INT:
+	case KEYWORD_INT:
 		return "<palavra-chave>"
-	case TOKEN_ID:
+	case ID:
 		return "<id>"
-	case TOKEN_ATRIB:
+	case ASSIGN:
 		return "<atrib>"
-	case TOKEN_MAIS:
+	case PLUS:
 		return "<op,+>"
-	case TOKEN_MENOS:
+	case MINUS:
 		return "<op,->"
-	case TOKEN_VEZES:
+	case TIMES:
 		return "<op,*>"
-	case TOKEN_PVIRG:
+	case SEMI:
 		return "<delim,;>"
-	case TOKEN_APAR:
+	case LPAREN:
 		return "<delim,(>"
-	case TOKEN_FPAR:
+	case RPAREN:
 		return "<delim,)>"
-	case TOKEN_NUM:
+	case NUM:
 		return "<num>"
 	default:
 		return "<erro>"
 	}
-}
-
-func lerEntrada() string {
-	fmt.Println("Digite o código (Ctrl+D para finalizar):")
-	scanner := bufio.NewScanner(os.Stdin)
-	var sb strings.Builder
-	for scanner.Scan() {
-		sb.WriteString(scanner.Text())
-		sb.WriteRune('\n')
-	}
-	return sb.String()
 }
