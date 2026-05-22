@@ -263,7 +263,7 @@ Otimizações               → propagação de constantes,       ← Dallyla
 | Seção | O que escrever |
 |---|---|
 | 1 – Introdução | Descrição da MiniLang, exemplos de programas válidos |
-| 2 – Gramática e Autômatos | BNF do `parser.y` + diagrama do autômato léxico |
+| 2 – Gramática e Autômatos | BNF do `parser.y` + **diagrama do autômato finito léxico** (ver tarefa abaixo ⚠️) |
 | 3 – Análise Léxica | Explicar o `lexer.go`, mostrar tabela de tokens de exemplo |
 | 4 – Análise Sintática | Explicar o parser LALR(1), mostrar exemplo de AST gerada |
 | 5 – Tradução Dirigida | Explicar as ações semânticas e a tabela de símbolos |
@@ -271,9 +271,19 @@ Otimizações               → propagação de constantes,       ← Dallyla
 | 7 – Ambiente de Execução | Descrever como a tabela de símbolos gerencia memória |
 | 8 – Geração de Código | Mostrar exemplo de código Python gerado |
 | 9 – Otimizações | Mostrar antes/depois da propagação de constantes e eliminação de mortos |
-| 10 – Paralelismo | Analisar quais instruções do código intermediário são independentes |
+| 10 – Paralelismo | **Grafo de dependências entre instruções** (ver tarefa abaixo ⚠️) |
 | 11 – Localidade | Discutir como reordenar instruções poderia melhorar cache |
 | 12 – Aplicações | Relacionar com JIT (Java/.NET), compiladores para GPU, sistemas embarcados |
+
+> ⚠️ **Tarefa obrigatória — Seção 2: Autômato Finito Léxico**  
+> O professor pede explicitamente a **representação do autômato finito** usado na análise léxica, não só a gramática. Precisa ser um diagrama de estados mostrando as transições para cada categoria de token (`int`, identificadores, números, operadores, delimitadores). Pode ser desenhado à mão, gerado com uma ferramenta (ex: draw.io, Graphviz) ou incluído no relatório como imagem. **Só mencionar no texto não é suficiente.**
+
+> ⚠️ **Tarefa obrigatória — Seção 10: Grafo de Dependências**  
+> O professor pede uma **representação que evidencie dependências entre instruções**, não só análise teórica. Para o código intermediário gerado pelo Lean, Dallyla deve produzir um grafo simples onde cada nó é uma instrução e as arestas indicam qual instrução depende do resultado de outra. Exemplo para `t1 = b * c / t2 = a + t1 / soma = t2`:
+> ```
+> [t1 = b * c] ──→ [t2 = a + t1] ──→ [soma = t2]
+> ```
+> Pode ser uma imagem, um diagrama ASCII no relatório, ou gerado por código. **Instruções sem dependência entre si ficam em paralelo no grafo.**
 
 **Tarefas — Apresentação**
 
