@@ -1,0 +1,17 @@
+int processamento = 10;
+
+int rede = 0;
+
+int banco = 5;
+
+int usuarios = 100;
+
+int capacidade = 1;
+
+int tempoResposta = processamento + rede + banco;
+
+int custoTotal = tempoResposta * usuarios;
+
+int indice = custoTotal / capacidade;
+
+int r = indice;

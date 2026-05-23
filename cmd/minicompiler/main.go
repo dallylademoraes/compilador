@@ -5,6 +5,7 @@ import (
 	"compilador/pkg/compiler"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -33,9 +34,28 @@ func executarCompilador(entrada, origem string) {
 	fmt.Println("── Fase 1: Análise Léxica ──")
 	compiler.ImprimirTabelaTokens(entrada)
 	fmt.Println("\n── Fase 2: Análise Sintática ──")
-	ok := compiler.ExecutarParser(entrada)
+	ast, ok := compiler.ExecutarParser(entrada)
 	if !ok {
 		fmt.Println("\n✗  Programa rejeitado pela gramática.")
+		return
+	}
+
+	fmt.Println("\n── Fase 3: AST ──")
+	compiler.ImprimirAST(ast, 0)
+
+	outDir := "ast"
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		fmt.Printf("\nAviso: não foi possível criar diretório '%s' (%v).\n", outDir, err)
+		return
+	}
+
+	pngPath := filepath.Join(outDir, "ast.png")
+	if err := compiler.ExportarASTPNG(ast, pngPath); err != nil {
+		fmt.Printf("\nAviso: não foi possível gerar PNG da AST (%v).\n", err)
+		fmt.Println("Dica: instale o Graphviz e garanta que o comando 'dot' esteja no PATH.")
+	} else {
+		dotPath := filepath.Join(outDir, "ast.dot")
+		fmt.Printf("\nAST exportada para: %s e %s\n", dotPath, pngPath)
 	}
 }
 

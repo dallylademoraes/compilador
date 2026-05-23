@@ -84,6 +84,8 @@ func (l *Lexer) ProximoToken() InfoToken {
 		return InfoToken{MINUS, "-"}
 	case '*':
 		return InfoToken{TIMES, "*"}
+	case '/':
+		return InfoToken{DIV, "/"}
 	case ';':
 		return InfoToken{SEMI, ";"}
 	case '(':
@@ -100,6 +102,7 @@ type YyLex struct {
 	lexer *Lexer
 	lval  *yySymType
 	Erros []string
+	Program *Program
 }
 
 func (y *YyLex) Lex(lval *yySymType) int {
@@ -114,7 +117,7 @@ func (y *YyLex) Error(s string) {
 }
 
 // ExecutarParser coordena a análise sintática
-func ExecutarParser(entrada string) bool {
+func ExecutarParser(entrada string) (*Program, bool) {
 	lexer := NovoLexer(entrada)
 	yylex := &YyLex{lexer: lexer}
 	resultado := yyParse(yylex)
@@ -122,9 +125,9 @@ func ExecutarParser(entrada string) bool {
 		for _, e := range yylex.Erros {
 			fmt.Printf("│   [Erro sintático] %s\n", e)
 		}
-		return false
+		return nil, false
 	}
-	return true
+	return yylex.Program, true
 }
 
 // ImprimirTabelaTokens exibe a tabela léxica formatada
@@ -154,7 +157,7 @@ func NomeCategoria(tipo int) string {
 		return "identificador"
 	case ASSIGN:
 		return "atribuição"
-	case PLUS, MINUS, TIMES:
+	case PLUS, MINUS, TIMES, DIV:
 		return "operador"
 	case SEMI, LPAREN, RPAREN:
 		return "delimitador"
@@ -179,6 +182,8 @@ func NomeTipoToken(tipo int) string {
 		return "<op,->"
 	case TIMES:
 		return "<op,*>"
+	case DIV:
+		return "<op,/>"
 	case SEMI:
 		return "<delim,;>"
 	case LPAREN:

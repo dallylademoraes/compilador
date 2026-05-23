@@ -33,6 +33,11 @@ var exemplos = []struct {
 		valido:    true,
 	},
 	{
+		descricao: "Expressão com divisão",
+		codigo:    "int indice = custoTotal / capacidade;",
+		valido:    true,
+	},
+	{
 		descricao: "Expressão com parênteses",
 		codigo:    "int val = (a + b) * c;",
 		valido:    true,
@@ -67,9 +72,20 @@ func TestExemplos(t *testing.T) {
 		imprimirTabelaIndentada(ex.codigo)
 
 		fmt.Println("│   [Parser] Derivação:")
-		ok := compiler.ExecutarParser(ex.codigo)
+		ast, ok := compiler.ExecutarParser(ex.codigo)
+		if ok {
+			fmt.Println("│   [AST] Estrutura gerada:")
+			compiler.ImprimirAST(ast, 4)
+		}
 
 		if ok == ex.valido {
+			if ex.valido && ast == nil {
+				t.Errorf("Exemplo %d: AST não foi gerada para entrada válida", i+1)
+			}
+			if !ex.valido && ast != nil {
+				t.Errorf("Exemplo %d: AST foi gerada para entrada inválida", i+1)
+			}
+
 			if ok {
 				fmt.Println("│\n└── ✔  ACEITO (esperado: aceito)")
 			} else {
