@@ -28,7 +28,7 @@
 | `lexer.go` | Análise léxica — tokeniza `int`, IDs, NUMs, operadores (`+`, `-`, `*`, `/`) e delimitadores | ✅ Pronto |
 | `parser.y` | Gramática LALR(1) via goyacc — valida declarações e expressões com `+`, `-`, `*`, `/` | ✅ Pronto |
 | `parser.go` | Código gerado pelo goyacc | ✅ Gerado |
-| `main.go` | Entrada do programa — modo interativo `-i`, fases léxica/sintática/AST e exportação em `ast/` | ✅ Pronto |
+| `main.go` | Entrada do programa — lê do terminal (ou arquivo), fases léxica/sintática/AST e exportação em `ast/imagens/` | ✅ Pronto |
 | `main_test.go` | 9 casos de teste (aceitos e rejeitados), incluindo divisão | ✅ Pronto |
 | `ast.go` | Árvore sintática abstrata + impressão hierárquica + exportação DOT/PNG | ✅ Pronto |
 | `simbolos.go` + `semantico.go` | Tabela de símbolos + análise semântica | ⏳ Ícaro |
@@ -51,7 +51,7 @@ make build     # Gerar o executável
 
 ```bash
 go test -v ./...              # Testes
-go run ./cmd/minicompiler -i  # Modo interativo
+go run ./cmd/minicompiler      # Modo interativo
 ```
 
 ### Alterando a gramática

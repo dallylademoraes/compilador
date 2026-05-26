@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"compilador/pkg/compiler"
+	"crypto/rand"
 	"flag"
 	"fmt"
 	"io"
@@ -169,21 +170,59 @@ func executarCompilador(entrada, origem string, phases phaseFlags) {
 }
 
 func exportarAST(ast *compiler.Program) {
-	outDir := "ast"
+	outDir := filepath.Join("ast", "imagens")
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		fmt.Printf("\nAviso: não foi possível criar diretório '%s' (%v).\n", outDir, err)
 		return
 	}
 
-	pngPath := filepath.Join(outDir, "ast.png")
+	pngPath, err := novoCaminhoPNG(outDir)
+	if err != nil {
+		fmt.Printf("\nAviso: não foi possível gerar nome de arquivo da AST (%v).\n", err)
+		return
+	}
+
 	if err := compiler.ExportarASTPNG(ast, pngPath); err != nil {
 		fmt.Printf("\nAviso: não foi possível gerar PNG da AST (%v).\n", err)
 		fmt.Println("Dica: instale o Graphviz e garanta que o comando 'dot' esteja no PATH.")
 		return
 	}
 
-	dotPath := filepath.Join(outDir, "ast.dot")
+	dotPath := strings.TrimSuffix(pngPath, filepath.Ext(pngPath)) + ".dot"
 	fmt.Printf("\nAST exportada para: %s e %s\n", dotPath, pngPath)
+}
+
+func novoCaminhoPNG(dir string) (string, error) {
+	for i := 0; i < 10; i++ {
+		sufixo, err := sufixoAleatorio(6)
+		if err != nil {
+			return "", err
+		}
+
+		caminho := filepath.Join(dir, fmt.Sprintf("ast-%s.png", sufixo))
+		if _, err := os.Stat(caminho); os.IsNotExist(err) {
+			return caminho, nil
+		} else if err != nil {
+			return "", err
+		}
+	}
+
+	return "", fmt.Errorf("não foi possível gerar nome único para AST")
+}
+
+func sufixoAleatorio(tamanho int) (string, error) {
+	const alfabeto = "abcdefghijklmnopqrstuvwxyz"
+
+	bytes := make([]byte, tamanho)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+
+	for i := range bytes {
+		bytes[i] = alfabeto[int(bytes[i])%len(alfabeto)]
+	}
+
+	return string(bytes), nil
 }
 
 func lerEntrada() string {
