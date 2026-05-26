@@ -237,7 +237,7 @@ func executarCompilador(entrada, origem string, phases phaseFlags, outputPath st
 }
 
 func exportarAST(ast *compiler.Program) {
-	outDir := filepath.Join("ast", "imagens")
+	outDir := "ast"
 
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		fmt.Printf("\nAviso: não foi possível criar diretório '%s' (%v).\n", outDir, err)
