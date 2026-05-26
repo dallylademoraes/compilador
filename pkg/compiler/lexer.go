@@ -117,17 +117,27 @@ func (y *YyLex) Error(s string) {
 }
 
 // ExecutarParser coordena a análise sintática
-func ExecutarParser(entrada string) (*Program, bool) {
+func ParsearPrograma(entrada string) (*Program, []string) {
 	lexer := NovoLexer(entrada)
 	yylex := &YyLex{lexer: lexer}
 	resultado := yyParse(yylex)
 	if resultado != 0 || len(yylex.Erros) > 0 {
-		for _, e := range yylex.Erros {
+		erros := make([]string, len(yylex.Erros))
+		copy(erros, yylex.Erros)
+		return nil, erros
+	}
+	return yylex.Program, nil
+}
+
+func ExecutarParser(entrada string) (*Program, bool) {
+	program, erros := ParsearPrograma(entrada)
+	if len(erros) > 0 {
+		for _, e := range erros {
 			fmt.Printf("│   [Erro sintático] %s\n", e)
 		}
 		return nil, false
 	}
-	return yylex.Program, true
+	return program, true
 }
 
 // ImprimirTabelaTokens exibe a tabela léxica formatada

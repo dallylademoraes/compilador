@@ -166,6 +166,66 @@ func TestAnaliseSemantica(t *testing.T) {
 	}
 }
 
+func TestParseCLIArgs(t *testing.T) {
+	t.Parallel()
+
+	testes := []struct {
+		nome          string
+		args          []string
+		esperaArquivo string
+		esperaErro    bool
+		fases         phaseFlags
+	}{
+		{
+			nome:  "sem argumentos mostra todas as fases",
+			args:  nil,
+			fases: phaseFlags{tokens: true, parser: true, ast: true, semantic: true},
+		},
+		{
+			nome:          "arquivo posicional",
+			args:          []string{"programa.txt"},
+			esperaArquivo: "programa.txt",
+			fases:         phaseFlags{tokens: true, parser: true, ast: true, semantic: true},
+		},
+		{
+			nome:          "flags de fase com arquivo",
+			args:          []string{"--tokens", "--semantic", "programa.txt"},
+			esperaArquivo: "programa.txt",
+			fases:         phaseFlags{tokens: true, semantic: true},
+		},
+		{
+			nome:       "mais de um arquivo",
+			args:       []string{"a.txt", "b.txt"},
+			esperaErro: true,
+		},
+	}
+
+	for _, teste := range testes {
+		teste := teste
+		t.Run(teste.nome, func(t *testing.T) {
+			arquivo, fases, err := parseCLIArgs(teste.args)
+			if teste.esperaErro {
+				if err == nil {
+					t.Fatal("era esperado erro ao interpretar os argumentos")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("erro inesperado ao interpretar os argumentos: %v", err)
+			}
+
+			if arquivo != teste.esperaArquivo {
+				t.Fatalf("arquivo inesperado: esperado %q, obtido %q", teste.esperaArquivo, arquivo)
+			}
+
+			if fases != teste.fases {
+				t.Fatalf("seleção de fases inesperada: esperado %+v, obtido %+v", teste.fases, fases)
+			}
+		})
+	}
+}
+
 func imprimirTabelaIndentada(entrada string) {
 	l := compiler.NovoLexer(entrada)
 	fmt.Println("│   ┌───────────────┬─────────────────┬────────────────┐")
