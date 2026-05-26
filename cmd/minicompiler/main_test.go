@@ -102,6 +102,70 @@ func TestExemplos(t *testing.T) {
 	}
 }
 
+func TestAnaliseSemantica(t *testing.T) {
+	t.Parallel()
+
+	testes := []struct {
+		nome              string
+		codigo            string
+		esperaSucesso     bool
+		errosEsperados    []string
+		simbolosEsperados []string
+	}{
+		{
+			nome:              "programa semanticamente válido",
+			codigo:            "int x = 10;\nint y = x + 1;\ny = y + x;",
+			esperaSucesso:     true,
+			simbolosEsperados: []string{"x", "y"},
+		},
+		{
+			nome:           "uso antes da declaração",
+			codigo:         "int y = x + 1;",
+			esperaSucesso:  false,
+			errosEsperados: []string{"[Erro semântico] Variável 'x' usada antes de ser declarada"},
+		},
+		{
+			nome:           "atribuição sem declaração",
+			codigo:         "x = 42;",
+			esperaSucesso:  false,
+			errosEsperados: []string{"[Erro semântico] Variável 'x' usada antes de ser declarada"},
+		},
+		{
+			nome:           "redeclaração de variável",
+			codigo:         "int x = 1;\nint x = 2;",
+			esperaSucesso:  false,
+			errosEsperados: []string{"[Erro semântico] Variável 'x' já foi declarada"},
+		},
+	}
+
+	for _, teste := range testes {
+		teste := teste
+		t.Run(teste.nome, func(t *testing.T) {
+			ast, ok := compiler.ExecutarParser(teste.codigo)
+			if !ok {
+				t.Fatalf("parser rejeitou um caso de teste semântico válido para sintaxe: %q", teste.codigo)
+			}
+
+			tabela, erros := compiler.AnalisarSemantica(ast)
+			if (len(erros) == 0) != teste.esperaSucesso {
+				t.Fatalf("resultado semântico inesperado: erros=%v", erros)
+			}
+
+			for _, erroEsperado := range teste.errosEsperados {
+				if !contains(erros, erroEsperado) {
+					t.Fatalf("erro esperado não encontrado: %q em %v", erroEsperado, erros)
+				}
+			}
+
+			for _, nome := range teste.simbolosEsperados {
+				if _, ok := tabela.Buscar(nome); !ok {
+					t.Fatalf("símbolo %q não foi registrado na tabela", nome)
+				}
+			}
+		})
+	}
+}
+
 func imprimirTabelaIndentada(entrada string) {
 	l := compiler.NovoLexer(entrada)
 	fmt.Println("│   ┌───────────────┬─────────────────┬────────────────┐")
@@ -116,4 +180,13 @@ func imprimirTabelaIndentada(entrada string) {
 			tok.Valor, compiler.NomeTipoToken(tok.Tipo), compiler.NomeCategoria(tok.Tipo))
 	}
 	fmt.Println("│   └───────────────┴─────────────────┴────────────────┘")
+}
+
+func contains(slice []string, target string) bool {
+	for _, item := range slice {
+		if item == target {
+			return true
+		}
+	}
+	return false
 }

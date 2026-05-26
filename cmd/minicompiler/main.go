@@ -57,6 +57,20 @@ func executarCompilador(entrada, origem string) {
 		dotPath := filepath.Join(outDir, "ast.dot")
 		fmt.Printf("\nAST exportada para: %s e %s\n", dotPath, pngPath)
 	}
+
+	fmt.Println("\n── Fase 4: Análise Semântica ──")
+	tabela, erros := compiler.AnalisarSemantica(ast)
+	if len(erros) > 0 {
+		for _, erro := range erros {
+			fmt.Println(erro)
+		}
+		fmt.Println("\n✗  Programa rejeitado semanticamente.")
+		return
+	}
+
+	fmt.Println("✔  Análise semântica concluída sem erros.")
+	fmt.Println("\nTabela de símbolos:")
+	tabela.Imprimir()
 }
 
 func lerEntrada() string {

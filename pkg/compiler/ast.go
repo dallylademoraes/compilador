@@ -11,6 +11,17 @@ import (
 // Node representa qualquer nó da AST.
 type Node interface {
 	node()
+	Accept(Visitor)
+}
+
+// Visitor define operações sobre os nós da AST.
+type Visitor interface {
+	VisitProgram(*Program)
+	VisitDecl(*Decl)
+	VisitAssign(*Assign)
+	VisitBinOp(*BinOp)
+	VisitIdentifier(*Identifier)
+	VisitNum(*Num)
 }
 
 // Stmt representa um statement da linguagem.
@@ -59,17 +70,24 @@ type Num struct {
 	Value string
 }
 
-func (*Program) node() {}
-func (*Decl) node()    {}
-func (*Decl) stmt()    {}
-func (*Assign) node()  {}
-func (*Assign) stmt()  {}
-func (*BinOp) node()   {}
-func (*BinOp) expr()   {}
-func (*Identifier) node()  {}
-func (*Identifier) expr()  {}
-func (*Num) node()     {}
-func (*Num) expr()     {}
+func (*Program) node()    {}
+func (*Decl) node()       {}
+func (*Decl) stmt()       {}
+func (*Assign) node()     {}
+func (*Assign) stmt()     {}
+func (*BinOp) node()      {}
+func (*BinOp) expr()      {}
+func (*Identifier) node() {}
+func (*Identifier) expr() {}
+func (*Num) node()        {}
+func (*Num) expr()        {}
+
+func (n *Program) Accept(v Visitor)    { v.VisitProgram(n) }
+func (n *Decl) Accept(v Visitor)       { v.VisitDecl(n) }
+func (n *Assign) Accept(v Visitor)     { v.VisitAssign(n) }
+func (n *BinOp) Accept(v Visitor)      { v.VisitBinOp(n) }
+func (n *Identifier) Accept(v Visitor) { v.VisitIdentifier(n) }
+func (n *Num) Accept(v Visitor)        { v.VisitNum(n) }
 
 // ImprimirAST exibe a árvore sintática em formato hierárquico.
 func ImprimirAST(no Node, indent int) {
