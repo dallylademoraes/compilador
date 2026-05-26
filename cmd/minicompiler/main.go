@@ -12,13 +12,26 @@ import (
 func main() {
 	cabecalho()
 
-	if len(os.Args) > 1 && os.Args[1] == "-i" {
+	interactive := false
+	outputPath := ""
+
+	for i := 1; i < len(os.Args); i++ {
+		if os.Args[i] == "-i" {
+			interactive = true
+		} else if os.Args[i] == "-o" && i+1 < len(os.Args) {
+			outputPath = os.Args[i+1]
+			i++
+		}
+	}
+
+	if interactive {
 		entrada := lerEntrada()
-		executarCompilador(entrada, "entrada do usuário")
+		executarCompilador(entrada, "entrada do usuário", outputPath)
 		return
 	}
 
 	fmt.Println("Use '-i' para entrar no modo interativo ou 'go test ./...' para rodar a validação de exemplos.")
+	fmt.Println("Opcional: use '-o saida.py' para salvar o código Python gerado.")
 }
 
 func cabecalho() {
@@ -29,10 +42,12 @@ func cabecalho() {
 	fmt.Println()
 }
 
-func executarCompilador(entrada, origem string) {
+func executarCompilador(entrada, origem, outputPath string) {
 	fmt.Printf("\n── Código de %s ──\n%s\n\n", origem, entrada)
+	
 	fmt.Println("── Fase 1: Análise Léxica ──")
 	compiler.ImprimirTabelaTokens(entrada)
+	
 	fmt.Println("\n── Fase 2: Análise Sintática ──")
 	ast, ok := compiler.ExecutarParser(entrada)
 	if !ok {
@@ -42,6 +57,33 @@ func executarCompilador(entrada, origem string) {
 
 	fmt.Println("\n── Fase 3: AST ──")
 	compiler.ImprimirAST(ast, 0)
+
+	// Fase 5: Código Intermediário
+	fmt.Println("\n── Fase 5: Código Intermediário (3AC) ──")
+	gerador := &compiler.Gerador3AC{}
+	for _, stmt := range ast.Statements {
+		gerador.VisitNode(stmt)
+	}
+	for _, inst := range gerador.Instruction_list {
+		if inst.Operador == "=" {
+			fmt.Printf("%s = %s\n", inst.Result_addr, inst.Var_um)
+		} else {
+			fmt.Printf("%s = %s %s %s\n", inst.Result_addr, inst.Var_um, inst.Operador, inst.Var_dois)
+		}
+	}
+
+	// Fase 6: Geração de Código Python
+	fmt.Println("\n── Fase 6: Geração de Código Python ──")
+	codigoPython := compiler.GerarPython(gerador.Instruction_list)
+	fmt.Println(codigoPython)
+
+	if outputPath != "" {
+		if err := os.WriteFile(outputPath, []byte(codigoPython), 0644); err != nil {
+			fmt.Printf("\nErro ao salvar arquivo de saída: %v\n", err)
+		} else {
+			fmt.Printf("\nCódigo Python salvo em: %s\n", outputPath)
+		}
+	}
 
 	outDir := "ast"
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
