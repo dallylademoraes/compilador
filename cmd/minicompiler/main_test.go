@@ -10,8 +10,7 @@ import (
 var exemplos = []struct {
 	descricao string
 	codigo    string
-	valido    bool
-}{
+	valido    bool}{
 	{
 		descricao: "Declaração com atribuição simples",
 		codigo:    "int soma = a + b;",
@@ -76,7 +75,36 @@ func TestExemplos(t *testing.T) {
 		if ok {
 			fmt.Println("│   [AST] Estrutura gerada:")
 			compiler.ImprimirAST(ast, 4)
+
+			// --- INTEGRAÇÃO DO CÓDIGO INTERMEDIÁRIO (3AC) ---
+			fmt.Println("│\n│   [3AC] Código Intermediário gerado:")
+			gerador := &compiler.Gerador3AC{}
+
+			// Varre as linhas da AST
+			for _, stmt := range ast.Statements {
+				gerador.VisitNode(stmt)
+			}
+
+			// Imprime as instruções formatadas
+			for _, inst := range gerador.Instruction_list {
+				if inst.Operador == "=" {
+					fmt.Printf("│       %s = %s\n", inst.Result_addr, inst.Var_um)
+				} else {
+					fmt.Printf("│       %s = %s %s %s\n", inst.Result_addr, inst.Var_um, inst.Operador, inst.Var_dois)
+				}
+			}
+			// --- INTEGRAÇÃO DO CÓDIGO DESTINO (PYTHON) ---
+			fmt.Println("│\n│   [Python] Código Destino gerado:")
+			codigoPython := compiler.GerarPython(gerador.Instruction_list)
+
+			// Quebra o texto gerado em linhas para alinhar com o design do seu terminal
+			linhasPython := strings.Split(strings.TrimSpace(codigoPython), "\n")
+			for _, linha := range linhasPython {
+				fmt.Printf("│       %s\n", linha)
+			}
 		}
+
+
 
 		if ok == ex.valido {
 			if ex.valido && ast == nil {

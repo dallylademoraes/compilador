@@ -19,22 +19,29 @@ type phaseFlags struct {
 	semantic bool
 }
 
+type cliOptions struct {
+	inputFile   string
+	interactive bool
+	outputPath  string
+	phases      phaseFlags
+}
+
 func main() {
 	cabecalho()
 
-	inputFile, phases, err := parseCLIArgs(os.Args[1:])
+	options, err := parseCLIOptions(os.Args[1:])
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	entrada, origem, err := carregarEntrada(inputFile)
+	entrada, origem, err := carregarEntrada(options)
 	if err != nil {
 		fmt.Printf("Erro ao ler entrada: %v\n", err)
 		os.Exit(1)
 	}
 
-	executarCompilador(entrada, origem, phases)
+	executarCompilador(entrada, origem, options.phases, options.outputPath)
 }
 
 func cabecalho() {
@@ -45,7 +52,7 @@ func cabecalho() {
 	fmt.Println()
 }
 
-func parseCLIArgs(args []string) (string, phaseFlags, error) {
+func parseCLIOptions(args []string) (cliOptions, error) {
 	fs := flag.NewFlagSet("minicompiler", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -53,19 +60,26 @@ func parseCLIArgs(args []string) (string, phaseFlags, error) {
 	var parserOnly bool
 	var astOnly bool
 	var semanticOnly bool
+	var interactive bool
+	var outputPath string
 
 	fs.BoolVar(&tokensOnly, "tokens", false, "Mostra apenas a fase léxica")
 	fs.BoolVar(&parserOnly, "parser", false, "Mostra apenas a fase sintática")
 	fs.BoolVar(&astOnly, "ast", false, "Mostra apenas a AST")
 	fs.BoolVar(&semanticOnly, "semantic", false, "Mostra apenas a fase semântica")
+	fs.BoolVar(&interactive, "i", false, "Força leitura interativa da entrada via terminal")
+	fs.StringVar(&outputPath, "o", "", "Salva o código Python gerado em um arquivo")
 
 	if err := fs.Parse(args); err != nil {
-		return "", phaseFlags{}, fmt.Errorf("%v\n\n%s", err, usage())
+		return cliOptions{}, fmt.Errorf("%v\n\n%s", err, usage())
 	}
 
 	restantes := fs.Args()
 	if len(restantes) > 1 {
-		return "", phaseFlags{}, fmt.Errorf("apenas um arquivo de entrada pode ser informado\n\n%s", usage())
+		return cliOptions{}, fmt.Errorf("apenas um arquivo de entrada pode ser informado\n\n%s", usage())
+	}
+	if interactive && len(restantes) == 1 {
+		return cliOptions{}, fmt.Errorf("não use -i junto com arquivo de entrada\n\n%s", usage())
 	}
 
 	phases := phaseFlags{
@@ -78,36 +92,62 @@ func parseCLIArgs(args []string) (string, phaseFlags, error) {
 		phases = phaseFlags{tokens: true, parser: true, ast: true, semantic: true}
 	}
 
+	inputFile := ""
 	if len(restantes) == 1 {
-		return restantes[0], phases, nil
+		inputFile = restantes[0]
 	}
-	return "", phases, nil
+
+	return cliOptions{
+		inputFile:   inputFile,
+		interactive: interactive,
+		outputPath:  outputPath,
+		phases:      phases,
+	}, nil
+}
+
+func parseCLIArgs(args []string) (string, phaseFlags, error) {
+	options, err := parseCLIOptions(args)
+	if err != nil {
+		return "", phaseFlags{}, err
+	}
+
+	return options.inputFile, options.phases, nil
 }
 
 func usage() string {
 	return strings.TrimSpace(`
 Uso:
-  go run ./cmd/minicompiler
-  go run ./cmd/minicompiler nomeDoArquivo.txt
-  go run ./cmd/minicompiler [--tokens] [--parser] [--ast] [--semantic] [arquivo]
+  go run ./cmd/minicompiler [opcoes] [arquivo]
+
+Opções:
+  -i            Lê a entrada do terminal (não pode ser usado com arquivo)
+  -o arquivo.py Salva o código Python gerado no caminho informado
+  --tokens      Mostra apenas a fase léxica
+  --parser      Mostra apenas a fase sintática
+  --ast         Mostra apenas a AST
+  --semantic    Mostra apenas a fase semântica
 
 Sem arquivo informado, o compilador lê a entrada do terminal até Ctrl+D (Linux/macOS) ou Ctrl+Z (Windows).
 `)
 }
 
-func carregarEntrada(inputFile string) (string, string, error) {
-	if inputFile != "" {
-		conteudo, err := os.ReadFile(inputFile)
+func carregarEntrada(options cliOptions) (string, string, error) {
+	if options.interactive || options.inputFile == "" {
+		return lerEntrada(), "entrada do usuário", nil
+	}
+
+	if options.inputFile != "" {
+		conteudo, err := os.ReadFile(options.inputFile)
 		if err != nil {
 			return "", "", err
 		}
-		return string(conteudo), fmt.Sprintf("arquivo %s", inputFile), nil
+		return string(conteudo), fmt.Sprintf("arquivo %s", options.inputFile), nil
 	}
 
 	return lerEntrada(), "entrada do usuário", nil
 }
 
-func executarCompilador(entrada, origem string, phases phaseFlags) {
+func executarCompilador(entrada, origem string, phases phaseFlags, outputPath string) {
 	fmt.Printf("\n── Código de %s ──\n%s\n\n", origem, entrada)
 
 	if phases.tokens {
@@ -167,10 +207,38 @@ func executarCompilador(entrada, origem string, phases phaseFlags) {
 		fmt.Println("\nTabela de símbolos:")
 		tabela.Imprimir()
 	}
+
+	// Fase 5: Código Intermediário
+	fmt.Println("\n── Fase 5: Código Intermediário (3AC) ──")
+	gerador := &compiler.Gerador3AC{}
+	for _, stmt := range ast.Statements {
+		gerador.VisitNode(stmt)
+	}
+	for _, inst := range gerador.Instruction_list {
+		if inst.Operador == "=" {
+			fmt.Printf("%s = %s\n", inst.Result_addr, inst.Var_um)
+		} else {
+			fmt.Printf("%s = %s %s %s\n", inst.Result_addr, inst.Var_um, inst.Operador, inst.Var_dois)
+		}
+	}
+
+	// Fase 6: Geração de Código Python
+	fmt.Println("\n── Fase 6: Geração de Código Python ──")
+	codigoPython := compiler.GerarPython(gerador.Instruction_list)
+	fmt.Println(codigoPython)
+
+	if outputPath != "" {
+		if err := os.WriteFile(outputPath, []byte(codigoPython), 0644); err != nil {
+			fmt.Printf("\nErro ao salvar arquivo de saída: %v\n", err)
+		} else {
+			fmt.Printf("\nCódigo Python salvo em: %s\n", outputPath)
+		}
+	}
 }
 
 func exportarAST(ast *compiler.Program) {
 	outDir := filepath.Join("ast", "imagens")
+
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		fmt.Printf("\nAviso: não foi possível criar diretório '%s' (%v).\n", outDir, err)
 		return
