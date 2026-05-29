@@ -110,7 +110,6 @@ func parseCLIArgs(args []string) (string, phaseFlags, error) {
 	if err != nil {
 		return "", phaseFlags{}, err
 	}
-
 	return options.inputFile, options.phases, nil
 }
 
@@ -135,7 +134,6 @@ func carregarEntrada(options cliOptions) (string, string, error) {
 	if options.interactive || options.inputFile == "" {
 		return lerEntrada(), "entrada do usuário", nil
 	}
-
 	if options.inputFile != "" {
 		conteudo, err := os.ReadFile(options.inputFile)
 		if err != nil {
@@ -143,7 +141,6 @@ func carregarEntrada(options cliOptions) (string, string, error) {
 		}
 		return string(conteudo), fmt.Sprintf("arquivo %s", options.inputFile), nil
 	}
-
 	return lerEntrada(), "entrada do usuário", nil
 }
 
@@ -208,7 +205,7 @@ func executarCompilador(entrada, origem string, phases phaseFlags, outputPath st
 		tabela.Imprimir()
 	}
 
-	// Fase 5: Código Intermediário
+	// Fase 5: Código Intermediário (3AC) — antes da otimização
 	fmt.Println("\n── Fase 5: Código Intermediário (3AC) ──")
 	gerador := &compiler.Gerador3AC{}
 	for _, stmt := range ast.Statements {
@@ -222,9 +219,20 @@ func executarCompilador(entrada, origem string, phases phaseFlags, outputPath st
 		}
 	}
 
-	// Fase 6: Geração de Código Python
+	// Fase 5.5: Otimização
+	fmt.Println("\n── Fase 5.5: Otimização ──")
+	instrucoesOtimizadas := compiler.Otimizar(gerador.Instruction_list)
+	for _, inst := range instrucoesOtimizadas {
+		if inst.Operador == "=" {
+			fmt.Printf("%s = %s\n", inst.Result_addr, inst.Var_um)
+		} else {
+			fmt.Printf("%s = %s %s %s\n", inst.Result_addr, inst.Var_um, inst.Operador, inst.Var_dois)
+		}
+	}
+
+	// Fase 6: Geração de Código Python (usa instruções otimizadas)
 	fmt.Println("\n── Fase 6: Geração de Código Python ──")
-	codigoPython := compiler.GerarPython(gerador.Instruction_list)
+	codigoPython := compiler.GerarPython(instrucoesOtimizadas)
 	fmt.Println(codigoPython)
 
 	if outputPath != "" {
@@ -266,7 +274,6 @@ func novoCaminhoPNG(dir string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-
 		caminho := filepath.Join(dir, fmt.Sprintf("ast-%s.png", sufixo))
 		if _, err := os.Stat(caminho); os.IsNotExist(err) {
 			return caminho, nil
@@ -274,22 +281,18 @@ func novoCaminhoPNG(dir string) (string, error) {
 			return "", err
 		}
 	}
-
 	return "", fmt.Errorf("não foi possível gerar nome único para AST")
 }
 
 func sufixoAleatorio(tamanho int) (string, error) {
 	const alfabeto = "abcdefghijklmnopqrstuvwxyz"
-
 	bytes := make([]byte, tamanho)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
-
 	for i := range bytes {
 		bytes[i] = alfabeto[int(bytes[i])%len(alfabeto)]
 	}
-
 	return string(bytes), nil
 }
 

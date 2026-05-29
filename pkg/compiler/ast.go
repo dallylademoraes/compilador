@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -193,7 +194,12 @@ func ExportarASTPNG(no Node, caminhoPNG string) error {
 		return err
 	}
 
-	cmd := exec.Command("dot", "-Tpng", dotPath, "-o", caminhoPNG)
+	dotCmd, err := resolverComandoDot()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(dotCmd, "-Tpng", dotPath, "-o", caminhoPNG)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		if len(out) > 0 {
 			return fmt.Errorf("falha ao executar dot: %v (%s)", err, strings.TrimSpace(string(out)))
@@ -202,6 +208,33 @@ func ExportarASTPNG(no Node, caminhoPNG string) error {
 	}
 
 	return nil
+}
+
+func resolverComandoDot() (string, error) {
+	// Permite sobrescrever o caminho do Graphviz explicitamente.
+	if dotEnv := strings.TrimSpace(os.Getenv("GRAPHVIZ_DOT")); dotEnv != "" {
+		if _, err := os.Stat(dotEnv); err == nil {
+			return dotEnv, nil
+		}
+	}
+
+	if caminho, err := exec.LookPath("dot"); err == nil {
+		return caminho, nil
+	}
+
+	if runtime.GOOS == "windows" {
+		fallbacks := []string{
+			`C:\Program Files\Graphviz\bin\dot.exe`,
+			`C:\Program Files (x86)\Graphviz\bin\dot.exe`,
+		}
+		for _, caminho := range fallbacks {
+			if _, err := os.Stat(caminho); err == nil {
+				return caminho, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("falha ao executar dot: executable file not found in %%PATH%%")
 }
 
 func rotuloNo(no Node) string {
