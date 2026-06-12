@@ -31,9 +31,9 @@
 | `main.go` | Entrada do programa — lê do terminal (ou arquivo), fases léxica/sintática/AST e exportação em `ast/` | ✅ Pronto |
 | `main_test.go` | 9 casos de teste (aceitos e rejeitados), incluindo divisão | ✅ Pronto |
 | `ast.go` | Árvore sintática abstrata + impressão hierárquica + exportação DOT/PNG | ✅ Pronto |
-| `simbolos.go` + `semantico.go` | Tabela de símbolos + análise semântica | ⏳ Ícaro |
-| `intermediario.go` + `gerador.go` | Código intermediário + geração de código final | ⏳ Lean |
-| `otimizador.go` | Otimizações + relatório + apresentação | ⏳ Dallyla |
+| `simbolos.go` + `semantico.go` | Tabela de símbolos + análise semântica | ✅ Pronto |
+| `intermediario.go` + `gerador.go` | Código intermediário + geração de código final | ✅ Pronto |
+| `otimizador.go` | Otimizações + relatório + apresentação | ✅ Pronto |
 
 ---
 
